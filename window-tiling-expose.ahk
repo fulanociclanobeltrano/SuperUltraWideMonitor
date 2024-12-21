@@ -1,3 +1,8 @@
+; AutoHotKey script
+; Configure a button of your mouse to press Ctrl+Shift+Y.
+; Put this .ahk file at C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup.
+; Edit the values 5120 and/or 1440 bellow, which are my monitor resolution dimensions.
+
 ; Hotkey to trigger the function (Ctrl+Shift+Y)
 ^+y::
     ActivateWindowsSideBySide()
