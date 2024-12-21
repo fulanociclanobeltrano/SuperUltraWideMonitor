@@ -76,13 +76,6 @@ ActivateWindowsSideBySide()
         HWND := WinExist(title)
         DllCall("SetWindowPos", UInt, HWND, Int, 0, Int, Round(currentLeft), Int, Round(currentTop), Int, Round(currentWidth), Int, Round(currentHeight), UInt, 0x0010 | 0x0040) ; SWP_NOSIZE | SWP_NOMOVE
 
-
-        ;Sleep, 1
-        
-        ;THESE WORK!!!
-        ;left := (index - 1) * WindowWidth
-        ;title := window.Title
-        ;WinMove, %title%, , %left%, 0, WindowWidth, 1400
     }
   }
 }
