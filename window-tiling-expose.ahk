@@ -33,13 +33,15 @@ ActivateWindowsSideBySide()
  
   ScreenWidth := 5120
   NumWindows := windowArray.Length()
-  if (NumWindows < 3)
+  if (NumWindows == 1)
+    WindowWidth := ScreenWidth / 3
+  else if (NumWindows == 2 || NumWindows == 3)
     WindowWidth := ScreenWidth / 3
   else 
     WindowWidth := Floor(ScreenWidth / NumWindows)
 
   ; Outer loop for animation
-  numberOfSteps := 20
+  numberOfSteps := 10
   Loop, %numberOfSteps%
   {
     animStep := A_Index - 1
@@ -69,13 +71,21 @@ ActivateWindowsSideBySide()
         currentWidth := 0 + Round(originalWidth + ((finalWidth - originalWidth) / (numberOfSteps - animStep)))
 
         originalHeight := window.H
-        finalHeight := 1440
+        finalHeight := 1390
         currentHeight := 0 + Round(originalHeight + ((finalHeight - originalHeight) / (numberOfSteps - animStep)))
 
         ;WinMove, %title%, , %currentLeft%, %currentTop%, %currentWidth%, %currentHeight%
-        HWND := WinExist(title)
+        ;HWND := WinExist(title)
+	HWND := window.ID
         DllCall("SetWindowPos", UInt, HWND, Int, 0, Int, Round(currentLeft), Int, Round(currentTop), Int, Round(currentWidth), Int, Round(currentHeight), UInt, 0x0010 | 0x0040) ; SWP_NOSIZE | SWP_NOMOVE
 
+
+        ;Sleep, 1
+        
+        ;THESE WORK!!!
+        ;left := (index - 1) * WindowWidth
+        ;title := window.Title
+        ;WinMove, %title%, , %left%, 0, WindowWidth, 1400
     }
   }
 }
