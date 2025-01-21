@@ -1,10 +1,10 @@
 # Exposé for MacOS
 
-Step 1: Create the Script  
-1. Open “Script Editor” and type the script below.  
-2. Save it as `expose.scpt` and run it with:  
+Step 1: Create the Swift Script  
+1. Open a code editor and type the script below.  
+2. Save it as `expose.swift` and run it with:  
    ```bash
-   osascript expose.scpt
+   swift expose.swift
    ```
 
 Step 2: Create an Automator Application  
@@ -17,7 +17,7 @@ Step 2: Create an Automator Application
 4. Enter Your Shell Script:  
    ```bash
    #!/bin/sh
-   /usr/bin/osascript ~/Documents/expose.scpt
+   /usr/bin/swift ~/Documents/expose.swift
    ```
 5. Save as an app.  
 6. Move the app to the Applications folder.  
@@ -45,197 +45,178 @@ Step 5: Add App to Privacy Categories
 
 AppleScript Code for Window Arrangement:  
 
-```applescript
--- Get screen dimensions
-set screenInfo to do shell script "system_profiler SPDisplaysDataType | grep Resolution | head -1 | awk '{print $2, $4}'"
-set screenWidth to word 1 of screenInfo as integer
-set screenHeight to word 2 of screenInfo as integer
+```swift
+import Cocoa
+import ApplicationServices
 
--- Initialize array for windows
-set allWindows to {}
+// Get screen dimensions
+let screenWidth = NSScreen.main?.frame.size.width ?? 0
+let screenHeight = NSScreen.main?.frame.size.height ?? 0
 
--- Function to collect visible windows
-on collectWindows()
-	tell application "System Events"
-		set appProcesses to application processes
-		set collectedWindows to {}
-		repeat with appProcess in appProcesses
-			tell appProcess
-				if visible is true then
-					set appName to name
-					try
-						if appName is "Google Chrome" then
-							-- Handle Google Chrome using its native AppleScript support
-							tell application "Google Chrome"
-								repeat with win in windows
-									set winBounds to bounds of win
-									set xCoord to item 1 of winBounds
-									set widthHeight to {(item 3 of winBounds) - (item 1 of winBounds), (item 4 of winBounds) - (item 2 of winBounds)}
-									-- Prepare the window entry
-									set newWindow to {win, xCoord, widthHeight, appName}
-									set inserted to false
-									repeat with i from 1 to count of collectedWindows
-										if xCoord < item 2 of item i of collectedWindows then
-											set collectedWindows to (items 1 thru (i - 1) of collectedWindows) & {newWindow} & (items i thru -1 of collectedWindows)
-											set inserted to true
-											exit repeat
-										end if
-									end repeat
-									-- If not inserted, append to the end
-									if not inserted then
-										set end of collectedWindows to newWindow
-									end if
-									
-									-- set end of collectedWindows to {win, xCoord, widthHeight, appName}
-								end repeat
-							end tell
-						else
-							-- Handle other applications using System Events
-							repeat with win in windows
-								set winBounds to {position of win, size of win}
-								set xCoord to item 1 of item 1 of winBounds
-								set widthHeight to item 2 of winBounds
-								
-								-- Prepare the window entry
-								set newWindow to {win, xCoord, widthHeight, appName}
-								set inserted to false
-								repeat with i from 1 to count of collectedWindows
-									if xCoord < item 2 of item i of collectedWindows then
-										set collectedWindows to (items 1 thru (i - 1) of collectedWindows) & {newWindow} & (items i thru -1 of collectedWindows)
-										set inserted to true
-										exit repeat
-									end if
-								end repeat
-								-- If not inserted, append to the end
-								if not inserted then
-									set end of collectedWindows to newWindow
-								end if
-								
-								-- set end of collectedWindows to {win, xCoord, widthHeight, appName}
-							end repeat
-						end if
-					on error
-						-- Skip inaccessible windows and notify
-						-- display dialog "Encountered an inaccessible window. Retrying..."
-						return {} -- Return empty list to signal error and retry
-					end try
-				end if
-			end tell
-		end repeat
-		return collectedWindows
-	end tell
-end collectWindows
+// Initialize array for windows
+var allWindows: [(win: NSWindow, xCoord: CGFloat, widthHeight: NSSize, appName: String)] = []
 
--- Retry collecting windows up to 3 times
-set retryCount to 0
-set allWindows to {}
-repeat while retryCount < 3 and (count of allWindows) = 0
-	set retryCount to retryCount + 1
-	set allWindows to collectWindows()
-end repeat
+// Function to get app windows
+func getAppWindows(bundleIdentifier: String) -> [AXUIElement] {
+    guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
+        return []
+    }
+    
+    let appRef = AXUIElementCreateApplication(app.processIdentifier)
+    
+    var windowsList: CFTypeRef?
+    let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsList)
+    
+    guard result == .success,
+          let windowsArray = (windowsList as? NSArray) as? [AXUIElement] else {
+        return []
+    }
+    
+    return windowsArray
+}
 
--- Check if any windows were collected
-if (count of allWindows) = 0 then
-	-- display dialog "No windows found to arrange after multiple attempts."
-	return
-end if
+// Function to collect visible windows
+func collectWindows() -> [(window: AXUIElement, xCoord: CGFloat, widthHeight: NSSize, appName: String)] {
+    var collectedWindows: [(window: AXUIElement, xCoord: CGFloat, widthHeight: NSSize, appName: String)] = []
+    
+    let runningApplications = NSWorkspace.shared.runningApplications
+    for app in runningApplications {
+        if app.activationPolicy == .regular, let appBundle = app.bundleIdentifier {
+            let appName = app.localizedName ?? "Unknown"
+            let appWindows = getAppWindows(bundleIdentifier: appBundle)
+            
+            for window in appWindows {
+                var position = CGPoint.zero
+                var size = CGSize.zero
+                
+                // Get position
+                var positionValue: AnyObject?
+                AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &positionValue)
+                if let positionValue = positionValue {
+                    AXValueGetValue(positionValue as! AXValue, .cgPoint, &position)
+                }
+                
+                // Get size
+                var sizeValue: AnyObject?
+                AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue)
+                if let sizeValue = sizeValue {
+                    AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
+                }
+                
+                // Skip Finder windows at (0,0)
+                if appName == "Finder" && position.x == 0 && position.y == 0 {
+                    continue
+                }
+                
+                // Prepare the window entry
+                let newWindow = (window, position.x, NSSize(width: size.width, height: size.height), appName)
+                
+                // Insert window based on xCoord
+                if let index = collectedWindows.firstIndex(where: { $0.xCoord > position.x }) {
+                    collectedWindows.insert(newWindow, at: index)
+                } else {
+                    collectedWindows.append(newWindow)
+                }
+            }
+        }
+    }
+    return collectedWindows
+}
 
-set windowInfo to {}
-repeat with windowDetails in allWindows
-	set {win, xCoord, widthHeight, appName} to windowDetails
-	set winTitle to name of win
-	set end of windowInfo to winTitle & " (" & xCoord & ")"
-end repeat
+// Function to arrange windows side by side
+func arrangeWindowsSideBySide() {
+    // Check accessibility permissions
+    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+    let accessibilityEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary)
+    
+    print("Accessibility enabled:", accessibilityEnabled)
+    if !accessibilityEnabled {
+        print("Please enable accessibility permissions in System Preferences")
+        exit(1)
+    }
 
--- display dialog "Windows and x-coordinates:" & return & (windowInfo as text)
+    let windows = collectWindows()
+    print("Collected windows count:", windows.count)
+    
+    if windows.isEmpty {
+        print("No windows found")
+        exit(0)
+    }
+    
+    let windowCount = windows.count
+    // Calculate target width based on window count
+    let targetWidth: CGFloat
+    if windowCount <= 2 {
+        targetWidth = screenWidth / 3
+    } else {
+        targetWidth = screenWidth / CGFloat(windowCount)
+    }
+    let targetHeight = screenHeight
+    
+    // Animation parameters
+    let n: Int = 10  // Number of animation steps
+    
+    for step in 1...n {
+        for (index, windowDetails) in windows.enumerated() {
+            // Get current position and size
+            var currentPosition = CGPoint.zero
+            var currentSize = CGSize.zero
+            
+            var positionValue: AnyObject?
+            var sizeValue: AnyObject?
+            AXUIElementCopyAttributeValue(windowDetails.window, kAXPositionAttribute as CFString, &positionValue)
+            AXUIElementCopyAttributeValue(windowDetails.window, kAXSizeAttribute as CFString, &sizeValue)
+            
+            if let positionValue = positionValue {
+                AXValueGetValue(positionValue as! AXValue, .cgPoint, &currentPosition)
+            }
+            if let sizeValue = sizeValue {
+                AXValueGetValue(sizeValue as! AXValue, .cgSize, &currentSize)
+            }
+            
+            // Calculate target position based on window count
+            let finalX: CGFloat
+            if windowCount == 1 {
+                finalX = screenWidth / 3
+            } else if windowCount == 2 {
+                if index == 0 {
+                    finalX = (screenWidth / 2) - targetWidth
+                } else {
+                    finalX = screenWidth / 2
+                }
+            } else {
+                finalX = targetWidth * CGFloat(index)
+            }
+            let finalY = screenHeight - targetHeight
+            
+            // Interpolate between current and final positions/sizes
+            let progress = CGFloat(step) / CGFloat(n)
+            let newX = currentPosition.x + (finalX - currentPosition.x) * progress
+            let newY = currentPosition.y + (finalY - currentPosition.y) * progress
+            let newWidth = currentSize.width + (targetWidth - currentSize.width) * progress
+            let newHeight = currentSize.height + (targetHeight - currentSize.height) * progress
+            
+            // Create position and size values
+            let position = CGPoint(x: newX, y: newY)
+            let size = CGSize(width: newWidth, height: newHeight)
+            
+            // Convert position and size to AXValue
+            var axPosition = position
+            let axPositionRef = AXValueCreate(.cgPoint, &axPosition)!
+            
+            var axSize = size
+            let axSizeRef = AXValueCreate(.cgSize, &axSize)!
+            
+            // Set new position and size
+            AXUIElementSetAttributeValue(windowDetails.window, kAXPositionAttribute as CFString, axPositionRef)
+            AXUIElementSetAttributeValue(windowDetails.window, kAXSizeAttribute as CFString, axSizeRef)
+        }
+        
+        // Add a small delay between steps
+        Thread.sleep(forTimeInterval: 0.02)
+    }
+}
 
--- Arrange windows (rest of the script remains the same)
-set numWindows to count allWindows
-if numWindows ≤ 3 then
-	set desiredWidth to screenWidth / 3
-else
-	set desiredWidth to screenWidth / numWindows
-end if
-set desiredHeight to screenHeight
-set finalPositions to {}
-
--- Populate final positions
-repeat with i from 0 to (numWindows - 1)
-	set end of finalPositions to {i * desiredWidth, 0}
-end repeat
-
--- Animate window movement and resizing
-set steps to 5
-repeat with step from 1 to steps
-	repeat with i from 1 to numWindows
-		set winInfo to item i of allWindows
-		set win to item 1 of winInfo
-		set appName to item 4 of winInfo
-		set targetPosition to item i of finalPositions
-		if numWindows = 1 then
-			set targetX to (screenWidth / 2) - (desiredWidth / 2)
-		else if numWindows = 2 then
-			if i = 1 then
-				set targetX to (screenWidth / 2) - desiredWidth
-			else if i = 2 then
-				set targetX to (screenWidth / 2)
-			end if
-		else
-			set targetX to item 1 of targetPosition
-		end if
-		set targetY to item 2 of targetPosition
-		
-		tell application "System Events"
-			if appName is "Google Chrome" then
-				-- Handle Google Chrome window movement
-				tell application "Google Chrome"
-					try
-						set initialBounds to bounds of win
-						set initialX to item 1 of initialBounds
-						set initialY to item 2 of initialBounds
-						set initialWidth to (item 3 of initialBounds) - (item 1 of initialBounds)
-						set initialHeight to (item 4 of initialBounds) - (item 2 of initialBounds)
-						
-						-- Calculate incremental bounds
-						set newX to initialX + ((targetX - initialX) * step / steps)
-						set newY to initialY + ((targetY - initialY) * step / steps)
-						set newWidth to initialWidth + ((desiredWidth - initialWidth) * step / steps)
-						set newHeight to initialHeight + ((desiredHeight - initialHeight) * step / steps)
-						
-						-- Apply new bounds
-						set bounds of win to {newX, newY, newX + newWidth, newY + newHeight}
-					on error
-						-- display dialog "Cannot modify bounds for a window."
-					end try
-				end tell
-			else
-				-- Handle other applications' windows
-				tell application process appName
-					try
-						set initialPosition to position of win
-						set initialSize to size of win
-						set initialX to item 1 of initialPosition
-						set initialY to item 2 of initialPosition
-						set initialWidth to item 1 of initialSize
-						set initialHeight to item 2 of initialSize
-						
-						-- Calculate incremental positions and sizes
-						set newX to initialX + ((targetX - initialX) * step / steps)
-						set newY to initialY + ((targetY - initialY) * step / steps)
-						set newWidth to initialWidth + ((desiredWidth - initialWidth) * step / steps)
-						set newHeight to initialHeight + ((desiredHeight - initialHeight) * step / steps)
-						
-						-- Apply new position and size
-						set position of win to {newX, newY}
-						set size of win to {newWidth, newHeight}
-					on error
-						-- display dialog "Cannot modify position or size for a window."
-					end try
-				end tell
-			end if
-		end tell
-	end repeat
-end repeat
-
--- display dialog "Windows arranged and resized successfully."
+// Replace the CSV output with window arrangement
+arrangeWindowsSideBySide()
 ```
