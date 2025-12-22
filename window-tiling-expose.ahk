@@ -1,6 +1,9 @@
 ; AutoHotKey script
 ; This script won't move windows, just expose them temporarily.
-; Configure a button of your mouse to press Ctrl+Shift+T.
+; Configure a button of your mouse to do 3 things:
+; 1. press Ctrl+Shift+T.
+; 2. wait 300ms
+; 3. "exibir atividades (windows exposé)
 ; Put this .ahk file at C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup.
 
  ; Hotkey to trigger the function (Ctrl+Shift+T)
@@ -56,4 +59,5 @@ InsertSorted(ByRef arr, window) {
     ; Insert the window at the correct position
     arr.InsertAt(low, window)
 }
+
 
