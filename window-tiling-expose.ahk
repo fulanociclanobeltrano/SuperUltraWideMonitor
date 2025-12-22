@@ -1,7 +1,7 @@
 ; AutoHotKey script
-; Configure a button of your mouse to press Ctrl+Shift+Y.
+; This script won't move windows, just expose them temporarily.
+; Configure a button of your mouse to press Ctrl+Shift+T.
 ; Put this .ahk file at C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup.
-; Edit the values 5120 and/or 1440 bellow, which are my monitor resolution dimensions.
 
  ; Hotkey to trigger the function (Ctrl+Shift+T)
 ^+t::  ;
@@ -56,3 +56,4 @@ InsertSorted(ByRef arr, window) {
     ; Insert the window at the correct position
     arr.InsertAt(low, window)
 }
+
