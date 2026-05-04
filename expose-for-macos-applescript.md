@@ -41,6 +41,13 @@ Step 5: Add App to Privacy Categories
 1. Go to **System Preferences > Security & Privacy > Privacy**.  
 2. Add your app to relevant categories (e.g., Accessibility, Automation).  
 
+Step 6: Map your exported Application to a mouse button
+1. Open **Logi Options** (if your mouse is Logitech)
+2. Select your mouse.
+3. Under "Buttons", click the button you want to use.
+4. Under "Actions" > "Other Actions" > "Open application" > Select your exported Application.
+
+Enjoy!
 ---
 
 AppleScript Code for Window Arrangement:  
