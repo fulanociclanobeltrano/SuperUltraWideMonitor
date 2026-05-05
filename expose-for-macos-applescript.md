@@ -114,6 +114,10 @@ func collectWindows() -> [(window: AXUIElement, xCoord: CGFloat, widthHeight: NS
                 if appName == "Finder" && position.x == 0 && position.y == 0 {
                     continue
                 }
+
+                if (appName == "Defguard") {
+                    continue
+                }
                 
                 // Prepare the window entry
                 let newWindow = (window, position.x, NSSize(width: size.width, height: size.height), appName)
