@@ -58,7 +58,7 @@ AppleScript Code for Window Arrangement:
 import Cocoa
 import ApplicationServices
 
-let alternateCenterWindowSize = false
+let alternateCenterWindowSize = true
 let isLargerCenterPreferred = true // useful when alternateCenterWindowSize is FALSE
 
 struct WindowEntry {
@@ -226,9 +226,14 @@ func arrangeWindowsOnScreen(
     let centerWindowInitialWidth = windows[Int(floor(Double(windowCount) / 2))].size.width
 
     let targetWidth: CGFloat
-    if (windowCount == 4 || windowCount == 5) &&
+    if windowCount == 5 &&
        (alternateCenterWindowSize ? abs(centerWindowInitialWidth - screenWidth / CGFloat(windowCount)) < 1.0 : isLargerCenterPreferred) {
         targetWidth = screenWidth / 6
+    } else if windowCount == 4 &&
+       (alternateCenterWindowSize ? abs(centerWindowInitialWidth - screenWidth / CGFloat(windowCount)) < 1.0 : isLargerCenterPreferred) {
+        targetWidth = screenWidth / 6
+    } else if windowCount == 4 {
+        targetWidth = screenWidth / 4
     } else if windowCount == 3 &&
        (alternateCenterWindowSize ? abs(centerWindowInitialWidth - screenWidth / CGFloat(windowCount)) < 1.0 : isLargerCenterPreferred) {
         targetWidth = screenWidth / 4
@@ -268,6 +273,9 @@ func arrangeWindowsOnScreen(
                 finalLocalX = targetWidth * 5
                 finalWidth = targetWidth
             }
+        } else if windowCount == 4 {
+            finalLocalX = targetWidth * CGFloat(index)
+            finalWidth = targetWidth
         } else if windowCount == 3 && (alternateCenterWindowSize ? abs(centerWindowInitialWidth - (screenWidth / CGFloat(windowCount))) < 1.0 : isLargerCenterPreferred) {
             if index == 0 {
                 finalLocalX = targetWidth * 0
